@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Display Reversed</title>
+        <meta charset="utf-8" />
+        <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    </head>
+    <body>
+        <div id="controls">
+            <input id="input" /><input type="button" value="Render" onclick="renderText();" />
+        </div>
+        <div id="RenderArea" style="font-weight:bold;font-size:xx-large;margin:100px;"></div>
+        <script>
+            function renderText() {
+                document.getElementById("RenderArea").innerHTML = "&#8238;" + document.getElementById("input").value;
+                document.getElementById("controls").style.display = "none";
+            }
+        </script>
+    </body>
+</html>

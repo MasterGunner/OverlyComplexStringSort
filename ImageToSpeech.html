@@ -1,0 +1,163 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Image to Speech</title>
+        <meta charset="utf-8" />
+        <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <!-- <meta name="viewport" content="width=1280, user-scalable=yes" /> -->
+        <script src='https://code.responsivevoice.org/responsivevoice.js'></script>
+    </head>
+    <body>
+        <div id="DisclaimerContainer">
+                <input type="Button" value="Activate" onclick="closeDisclaimer();" style="height:64px;width:320px;"/>
+            </div>
+    
+            <div id="ImageToSpeechContainer" style="width:320px; color:white; display:none;">
+                <div style="position: relative; width:320px;">
+                    <!-- <img id="image" src="test.png" /> -->
+                    <video id="video" style="border:1px solid black;">Video stream not available.</video>
+                    <div id="objRect"></div>
+                </div>
+                <input type="button" value="Take Picture" id="startBtn" style="height:64px;width:320px;"/>
+                <div id="messageBox"></div>
+                <!-- <input type="button" value="Stop" id="stopBtn"/> -->
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
+        <script>
+            width = 320;
+            height = 0;
+
+            streaming = false;
+            objTrackInterval = null;
+
+            video = null;
+            canvas = null;
+            context = null;
+            objRect = null;
+
+            // paste your own api key here
+            objDectionApiKey = "";
+            objDectionApiDetectUrl = `https://eastus2.api.cognitive.microsoft.com/vision/v2.0/ocr?language=en&detectOrientation=true`;
+
+            function closeDisclaimer() {
+                document.getElementById("DisclaimerContainer").style.display = "none";
+                document.getElementById("ImageToSpeechContainer").style.display = "block";
+                loadObjDetection();
+            }
+
+            function loadObjDetection() {
+                video = document.getElementById("video");
+                canvas = document.getElementById("canvas");
+                objRect = document.getElementById("objRect");
+                context = canvas.getContext("2d");
+
+                
+
+                startButton = document.getElementById("startBtn");
+                startButton.onclick = function() {
+                    //objTrackInterval = setInterval(trackObj, 1000 / 1);
+                    trackObj();
+                }
+                
+
+                video.addEventListener("canplay", onVideoCanPlay, false);
+                
+                video.addEventListener("error", (error) => {
+                    dealWithFailure(error);
+                    if (objTrackInterval) clearInterval(objTrackInterval);
+                });
+                
+                const constraints = {
+                    video: { facingMode: "environment" },
+                    audio: false
+                };
+
+                navigator.mediaDevices.getUserMedia(constraints)
+                    .then(onGetMedia)
+                    .catch(dealWithFailure);
+            }
+
+            function onVideoCanPlay() {
+                if (!streaming) {
+                    height = video.videoHeight / (video.videoWidth/width);
+
+                    video.setAttribute("width", width);
+                    video.setAttribute("height", height);
+                    canvas.setAttribute("width", width);
+                    canvas.setAttribute("height", height);
+                    streaming = true;
+
+                    //if (objTrackInterval) return;
+                    //objTrackInterval = setInterval(trackObj, 1000 / 1);
+                }
+            }
+
+            function onGetMedia(stream) {
+                try {
+                    video.srcObject = stream;
+                } catch (error) {
+                    video.src = window.URL.createObjectURL(stream);
+                }
+                video.play();
+            }
+
+            function trackObj() {
+                context.drawImage(video, 0, 0, width, height);
+                // context.drawImage(document.getElementById("image"),0,0);
+                canvas.toBlob(updateText);
+            }
+
+            function updateText(photo) {
+                detectText(photo)
+                    .then((response) => response.json())
+                    .then((response) => placeObjectRect(response))
+                    .catch(dealWithFailure);
+            }
+
+            // this places a green rectangle framing the face for debugging purposes
+            function placeObjectRect(response) {
+                console.log(response);
+                // var detectedObj = response.predictions.sort((a, b) => { return a.probability - b.probability; }).pop();
+                // const rect = detectedObj.boundingBox;
+
+                // document.getElementById("messageBox").innerText = `DBloon Probability: ${detectedObj.probability}`
+                
+                // const styleUpdates = {
+                //     height: `${rect.height*100}%`,
+                //     width: `${rect.width*100}%`,
+                //     left: `${rect.left*100}%`,
+                //     top: `${rect.top*100}%`
+                // };
+                
+                // requestAnimationFrame(() => {
+                //     Object.keys(styleUpdates).forEach(prop => objRect.style[prop] = styleUpdates[prop]);
+                // });
+                
+                x = response;
+                var output = response.regions[0].lines[0].words.map((data) => data.text).join(' ');
+                console.log(output);
+                responsiveVoice.speak(output);
+            }
+
+            function detectText(photo) {
+                const options = {
+                    method: "POST",
+                    body: photo,
+                    headers: {
+                        "Content-Type": "application/octet-stream",
+                        "Ocp-Apim-Subscription-Key": objDectionApiKey
+                    }
+                };
+
+                return fetch(objDectionApiDetectUrl, options);
+            }
+
+            function dealWithFailure(reason) {
+                console.error("fail!", reason);
+                document.getElementById("messageBox").innerText = reason;
+            }
+        </script>
+    </body>
+</html>
